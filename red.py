@@ -22,17 +22,17 @@ parser.add_argument('--gpu', default=True, type=str2bool, help='GPU acceleration
 parser.add_argument('--dset_dir', default='Data_pt', type=str, help='dataset directory')
 
 # Net Parameters
-parser.add_argument('--n_hidden', default=4, type=int, help='number of hidden layers per MLP')
+parser.add_argument('--n_hidden', default=3, type=int, help='number of hidden layers per MLP')
 parser.add_argument('--dim_hidden', default=10, type=int, help='dimension of hidden units')
-parser.add_argument('--passes', default=8, type=int, help='number of message passing')
+parser.add_argument('--passes', default=3, type=int, help='number of message passing')
 
 # Training Parameters
 parser.add_argument('--seed', default=1, type=int, help='random seed')
-parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
+parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
 parser.add_argument('--lambda_d', default=1e2, type=float, help='data loss weight')
 parser.add_argument('--noise_var', default=1e-2, type=float, help='training noise variance')
 parser.add_argument('--batch_size', default=None, type=int, help='training batch size')
-parser.add_argument('--max_epoch', default=2000, type=int, help='maximum training iterations')
+parser.add_argument('--max_epoch', default=1000, type=int, help='maximum training iterations')
 parser.add_argument('--miles', default=[500, 1000, 1500], nargs='+', type=int, help='learning rate scheduler milestones')
 parser.add_argument('--gamma', default=1e-1, type=float, help='learning rate milestone decay')
 
@@ -45,7 +45,7 @@ args = parser.parse_args()
 class NormalizeOutput:
     def __call__(self, tensor):
         # Calcular la media y la desviación estándar del tensor
-        mean_val = tensor.mean()
+        mean_val = 0
         std_val = tensor.std()
         
         # Normalizar el tensor usando la media y la desviación estándar
@@ -113,7 +113,7 @@ class MLP(nn.Module):
             self.layers.append(nn.Linear(layer_vec[k], layer_vec[k + 1]))
             if k != (len(layer_vec) - 2): 
                 self.layers.append(nn.SiLU())
-                #self.layers.append(nn.BatchNorm1d(layer_vec[k + 1]))
+                self.layers.append(nn.BatchNorm1d(layer_vec[k + 1]))
                 self.layers.append(nn.Dropout(p=0.1))
 
     def forward(self, x):
@@ -222,7 +222,7 @@ def val(model, val_loader, criterion, device):
 def solve(model, train_set, val_set, test_set, args):
     device = torch.device("cuda" if args.gpu and torch.cuda.is_available() else "cpu")
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)
     criterion = torch.nn.MSELoss()
     #criterion = RMSLELoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
